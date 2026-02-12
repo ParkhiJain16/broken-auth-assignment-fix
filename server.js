@@ -15,7 +15,7 @@ const otpStore = {};
 // Middleware
 app.use(requestLogger);
 app.use(express.json());
-
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.json({
@@ -36,20 +36,20 @@ app.post("/auth/login", (req, res) => {
 
     // Generate session and OTP
     const loginSessionId = Math.random().toString(36).substring(7);
-    const otp = Math.floor(100000 + Math.random() * 900000); // 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000); 
 
     // Store session with 2-minute expiry
     loginSessions[loginSessionId] = {
       email,
       password,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 2 * 60 * 1000, // 2 minutes
+      expiresAt: Date.now() + 2 * 60 * 1000, 
     };
 
     // Store OTP
     otpStore[loginSessionId] = otp;
 
-    console.log(`[OTP] Session ${loginSessionId} generated`);
+    console.log(`[OTP] Session ${loginSessionId} generated. OTP: ${otp}`);
 
     return res.status(200).json({
       message: "OTP sent",
@@ -90,7 +90,7 @@ app.post("/auth/verify-otp", (req, res) => {
     res.cookie("session_token", loginSessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 15 * 60 * 1000, 
     });
 
     delete otpStore[loginSessionId];
@@ -109,45 +109,44 @@ app.post("/auth/verify-otp", (req, res) => {
 
 app.post("/auth/token", (req, res) => {
   try {
-    const token = req.headers.authorization;
+    console.log("Cookies:", req.cookies);
 
-    if (!token) {
-      return res
-        .status(401)
-        .json({ error: "Unauthorized - valid session required" });
+    const sessionToken = req.cookies.session_token;
+    console.log("Session Token:", sessionToken);
+
+    const session = loginSessions[sessionToken];
+    console.log("Session Found:", session);
+
+    if (!sessionToken) {
+      return res.status(401).json({ error: "No session cookie found" });
     }
-
-    const session = loginSessions[token.replace("Bearer ", "")];
 
     if (!session) {
       return res.status(401).json({ error: "Invalid session" });
     }
 
-    // Generate JWT
     const secret = process.env.JWT_SECRET || "default-secret-key";
 
     const accessToken = jwt.sign(
       {
         email: session.email,
-        sessionId: token,
+        sessionId: sessionToken,
       },
       secret,
-      {
-        expiresIn: "15m",
-      }
+      { expiresIn: "15m" }
     );
 
     return res.status(200).json({
       access_token: accessToken,
-      expires_in: 900,
     });
   } catch (error) {
+    console.error("Token Error:", error);  
     return res.status(500).json({
-      status: "error",
-      message: "Token generation failed",
+      error: "Token generation failed",
     });
   }
 });
+
 
 // Protected route example
 app.get("/protected", authMiddleware, (req, res) => {
