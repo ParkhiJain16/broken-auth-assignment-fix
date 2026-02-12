@@ -1,0 +1,36 @@
+1. Login:
+POST /auth/login
+Response:
+{
+  "message": "OTP sent",
+  "loginSessionId": "2yyp5k"
+}
+
+2. Verify OTP:
+POST /auth/verify-otp
+Response:
+{
+  "message": "OTP verified",
+  "sessionId": "2yyp5k"
+}
+
+3. Get Token:
+POST /auth/token
+Response:
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhcmtoaWphaW4xNjI4QGdtYWlsLmNvbSIsInNlc3Npb25JZCI6ImY5NXd4aSIsImlhdCI6MTc3MDg5NTEyNiwiZXhwIjoxNzcwODk2MDI2fQ.4aoZvu3Jps2jk-R_aNmiVFYdhtg-gu66oANLcUr1d_I"
+}
+
+4. Access Protected Route:
+GET /protected
+Response:
+{
+    "message": "Access granted",
+    "user": {
+        "email": "parkhijain1628@gmail.com",
+        "sessionId": "f95wxi",
+        "iat": 1770895126,
+        "exp": 1770896026
+    },
+    "success_flag": "FLAG-cGFya2hpamFpbjE2MjhAZ21haWwuY29tX0NPTVBMRVRFRF9BU1NJR05NRU5U"
+}
