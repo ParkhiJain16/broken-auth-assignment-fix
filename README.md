@@ -1,111 +1,41 @@
-# The Silent Server (Backend Debugging Assignment)
+# Broken Auth Assignment Fix
 
-This API is intentionally broken. Your task is to debug it and complete the authentication flow.
+## Overview
+ 
+  This project fixes the intentionally broken authentication flow. The goal was to debug and complete the full flow:
+  Login → OTP Verification → Session Cookie → JWT Token → Protected Route.
 
-## Setup
+## Bugs Identified and Fixed
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+  1. Logger Middleware Blocking Requests
 
-2. Start the server:
-   ```bash
-   npm start
-   ```
-   Server runs at: `http://localhost:3000`
+        The request logger middleware did not call next(), causing all routes to hang indefinitely.
+        Fix: Added next() to allow request flow to continue.
 
-## Assignment Objective
+  2. Missing cookie-parser Middleware
 
-The goal is to fix the broken authentication endpoints so that a user can:
-1.  **Login** to get a session ID and OTP.
-2.  **Verify the OTP** to get a valid session cookie.
-3.  **Exchange the Session** for a JWT Access Token.
-4.  **Access Protected Routes** using the token.
+        The server imported cookie-parser but never used it, so req.cookies was undefined.
+        Fix: Registered app.use(cookieParser()) to correctly parse cookies.
 
-You will need to use your browser's developer tools, network inspection, and server logs to debug.
+  3. Incorrect Token Endpoint Logic
 
----
+        The /auth/token endpoint incorrectly read the session from the Authorization header instead of the session cookie.
+        Fix: Updated endpoint to read req.cookies.session_token and generate JWT from session.
 
-## Tasks & Verification
+  4. Auth Middleware Missing next()
 
-### Task 1: Fix Login
-**Endpoint:** `POST /auth/login`
-The server should generate a session and log an OTP to the console.
+        The JWT verification middleware did not call next() after successful verification, blocking access to protected routes.
+        Fix: Added next() after setting req.user.
 
-**Test Command:**
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"<YOUR_EMAIL@example.com>","password":"password123"}'
-```
-**Expected Outcome:**
-- Server logs the OTP (e.g., `[OTP] Session abc12345 generated`).
-- Response contains `loginSessionId`.
+## Final Authentication Flow
 
-### Task 2: Fix OTP Verification
-**Endpoint:** `POST /auth/verify-otp`
-The server fails to verify the OTP correctly. You need to find out why.
-*Hint: Check data types and how cookies are set.*
+  1. POST /auth/login → generates loginSessionId and OTP
 
-**Test Command:**
-(Replace `<loginSessionId>` and `<otp>` with values from Task 1)
-```bash
-curl -c cookies.txt -X POST http://localhost:3000/auth/verify-otp \
-  -H "Content-Type: application/json" \
-  -d '{"loginSessionId":"<loginSessionId>","otp":"<otp_from_logs>"}'
-```
-**Expected Outcome:**
-- `cookies.txt` is created containing a session cookie.
-- Response says "OTP verified".
+  2. POST /auth/verify-otp → validates OTP and sets session_token cookie
 
-### Task 3: Fix Token Generation
-**Endpoint:** `POST /auth/token`
-This endpoint is supposed to issue a JWT, but it has a bug in how it reads the session.
+  3. POST /auth/token → reads session cookie and returns JWT
 
-**Test Command:**
-```bash
-# Uses the cookie captured in Task 2
-curl -b cookies.txt -X POST http://localhost:3000/auth/token
-```
-**Expected Outcome:**
-- Response contains `{ "access_token": "..." }`.
+  4. GET /protected → validates JWT and returns success flag
 
-### Task 4: Fix Protected Route Access
-**Endpoint:** `GET /protected`
-Ensure the middleware correctly validates the token.
-
-**Test Command:**
-```bash
-# Replace <jwt> with the token from Task 3
-curl -H "Authorization: Bearer <jwt>" http://localhost:3000/protected
-```
-**Expected Outcome:**
-- Response: `{ "message": "Access granted", "user": ... }`
-
----
-
-
-## Expected Output
-
-After fixing the bugs, you should be able to run the following sequence successfully:
-
-1.  **Login**: Receive a `loginSessionId` and see an OTP in the server logs.
-2.  **Verify OTP**: Receive a session cookie (`session_token`).
-3.  **Get Token**: Exchange the session cookie for a JWT (`access_token`).
-4.  **Access Protected Route**: Use the JWT to get a 200 OK response with user details and a **unique Success Flag**.
-
-**Important**: You must use **your own email address** when testing the login flow. The success flag is generated based on the email you use.
-
-
-
-
-## Submission
-
-To submit your assignment:
-
-1.  Push your code to a **Public GitHub Repository**.
-2.  Add a file named `output.txt` in your repository.
-    *   This file must contain the terminal output of all 4 test commands (Login, Verify OTP, Get Token, Access Protected Route).
-    *   Ensure the final command's output showing the `success_flag` is clearly visible in this file.
-3.  Share the link to your repository.
+### Output
+  See output.txt for the complete terminal output of all four steps.
